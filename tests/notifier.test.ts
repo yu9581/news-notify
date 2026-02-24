@@ -55,7 +55,7 @@ describe('createNotifier', () => {
     expect(mockDestroy).toHaveBeenCalled()
   })
 
-  it('記事を通知できる（メッセージ + スレッド + 要約）', async () => {
+  it('記事を通知できる（メッセージに要約、スレッドにURL）', async () => {
     const { createNotifier } = await import('../src/discord/notifier.js')
     const notifier = createNotifier('fake-token', 'fake-channel')
     await notifier.connect()
@@ -65,12 +65,18 @@ describe('createNotifier', () => {
     expect(mockChannelSend).toHaveBeenCalledWith(
       expect.stringContaining('Test News Article')
     )
+    expect(mockChannelSend).toHaveBeenCalledWith(
+      expect.stringContaining('テストの要約です。')
+    )
+    expect(mockChannelSend).toHaveBeenCalledWith(
+      expect.stringContaining('📌 出典: TestSource | 重要度: 🔴 高')
+    )
     expect(mockStartThread).toHaveBeenCalledWith({
       name: 'Test News Article',
       autoArchiveDuration: 1440,
     })
     expect(mockThreadSend).toHaveBeenCalledWith(
-      expect.stringContaining('テストの要約です。')
+      '🔗 https://example.com/test'
     )
   })
 
@@ -80,13 +86,13 @@ describe('createNotifier', () => {
     await notifier.connect()
 
     await notifier.notifyArticle(mockArticle)
-    expect(mockThreadSend).toHaveBeenCalledWith(expect.stringContaining('🔴'))
+    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🔴'))
 
     await notifier.notifyArticle({ ...mockArticle, importance: '中' })
-    expect(mockThreadSend).toHaveBeenCalledWith(expect.stringContaining('🟡'))
+    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🟡'))
 
     await notifier.notifyArticle({ ...mockArticle, importance: '低' })
-    expect(mockThreadSend).toHaveBeenCalledWith(expect.stringContaining('🟢'))
+    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🟢'))
   })
 
   it('カテゴリに応じた絵文字を使う', async () => {
