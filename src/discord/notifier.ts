@@ -30,7 +30,9 @@ export function createNotifier(botToken: string, channelId: string) {
     const textChannel = channel as unknown as TextSendable
 
     const categoryEmoji = getCategoryEmoji(article.category)
-    const messageContent = `${categoryEmoji} **[${article.category}]** ${article.title}\n${article.url}`
+    const importanceEmoji = article.importance === '高' ? '🔴' : article.importance === '中' ? '🟡' : '🟢'
+
+    const messageContent = `${categoryEmoji} **[${article.category}]** ${article.title}\n${article.summary}\n📌 出典: ${article.source} | 重要度: ${importanceEmoji} ${article.importance}`
 
     const message = await textChannel.send(messageContent)
 
@@ -39,11 +41,7 @@ export function createNotifier(botToken: string, channelId: string) {
       autoArchiveDuration: 1440,
     })
 
-    const importanceEmoji = article.importance === '高' ? '🔴' : article.importance === '中' ? '🟡' : '🟢'
-
-    await thread.send(
-      `📝 **要約**\n${article.summary}\n\n📌 出典: ${article.source} | 重要度: ${importanceEmoji} ${article.importance}`
-    )
+    await thread.send(`🔗 ${article.url}`)
   }
 
   async function notifyArticles(articles: readonly SummarizedArticle[]): Promise<number> {
