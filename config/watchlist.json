@@ -6,13 +6,21 @@
     { "name": "古川健介", "keywords": ["古川健介", "けんすう"], "lang": "ja" },
     { "name": "小澤隆生", "keywords": ["小澤隆生", "LINEヤフー CEO"], "lang": "ja" },
     { "name": "孫正義", "keywords": ["孫正義", "Masayoshi Son", "ソフトバンク 孫"], "lang": "ja" },
-    { "name": "深井龍之介", "keywords": ["深井龍之介", "COTEN"], "lang": "ja" }
+    { "name": "深井龍之介", "keywords": ["深井龍之介", "COTEN"], "lang": "ja" },
+    { "name": "足立光", "keywords": ["足立光", "ファミリーマート CMO"], "lang": "ja" },
+    { "name": "音部大輔", "keywords": ["音部大輔", "クー・マーケティング・カンパニー"], "lang": "ja" },
+    { "name": "佐藤尚之", "keywords": ["佐藤尚之", "さとなお"], "lang": "ja" },
+    { "name": "出口治明", "keywords": ["出口治明", "ライフネット生命"], "lang": "ja" },
+    { "name": "西井敏恭", "keywords": ["西井敏恭", "シンクロ"], "lang": "ja" },
+    { "name": "西口一希", "keywords": ["西口一希", "Strategy Partners"], "lang": "ja" },
+    { "name": "尾原和啓", "keywords": ["尾原和啓"], "lang": "ja" }
   ],
   "topics": [
     { "name": "AI", "keywords": ["artificial intelligence breakthrough", "AI news"], "lang": "en" },
     { "name": "LLM", "keywords": ["large language model", "ChatGPT", "Claude AI"], "lang": "en" },
     { "name": "Anthropic", "keywords": ["Anthropic", "Anthropic AI", "Claude Anthropic"], "lang": "en" },
-    { "name": "METR", "keywords": ["METR", "METR AI", "METR evaluation"], "lang": "en" }
+    { "name": "METR", "keywords": ["METR", "METR AI", "METR evaluation"], "lang": "en" },
+    { "name": "上場承認", "keywords": ["上場承認", "IPO承認", "新規上場"], "lang": "ja" }
   ],
   "feeds": [
     { "name": "TechCrunch", "url": "https://techcrunch.com/feed/", "filterKeywords": ["AI", "OpenAI"] },
