@@ -1,0 +1,24 @@
+{
+  "people": [
+    { "name": "Sam Altman", "keywords": ["Sam Altman"], "lang": "en" },
+    { "name": "Elon Musk", "keywords": ["Elon Musk AI"], "lang": "en" },
+    { "name": "深津貴之", "keywords": ["深津貴之", "fladdict"], "lang": "ja" },
+    { "name": "古川健介", "keywords": ["古川健介", "けんすう"], "lang": "ja" }
+  ],
+  "topics": [
+    { "name": "AI", "keywords": ["artificial intelligence breakthrough", "AI news"], "lang": "en" },
+    { "name": "LLM", "keywords": ["large language model", "ChatGPT", "Claude AI"], "lang": "en" }
+  ],
+  "feeds": [
+    { "name": "TechCrunch", "url": "https://techcrunch.com/feed/", "filterKeywords": ["AI", "OpenAI"] },
+    { "name": "The Verge AI", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml" },
+    { "name": "Hacker News AI", "url": "https://hnrss.org/newest?q=AI&points=50" }
+  ],
+  "settings": {
+    "maxArticlesPerKeyword": 5,
+    "maxTotalArticles": 30,
+    "fetchDelayMs": 500,
+    "summaryMaxTokens": 2048,
+    "deduplicationDays": 7
+  }
+}

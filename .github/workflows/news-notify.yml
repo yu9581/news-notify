@@ -1,0 +1,48 @@
+name: News Notify
+
+on:
+  schedule:
+    # JST 8:00 (UTC 23:00前日), 14:00 (UTC 5:00), 20:00 (UTC 11:00), 2:00 (UTC 17:00)
+    - cron: '0 23 * * *'
+    - cron: '0 5 * * *'
+    - cron: '0 11 * * *'
+    - cron: '0 17 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Node.js 20 をセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 依存関係をインストール
+        run: npm install
+
+      - name: 既読データを復元
+        uses: actions/cache@v4
+        with:
+          path: data/seen-articles.json
+          key: seen-articles-${{ github.run_id }}
+          restore-keys: |
+            seen-articles-
+
+      - name: ニュース通知を実行
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+        run: npx tsx src/index.ts
+
+      - name: 実行結果を記録
+        if: always()
+        run: |
+          echo "実行日時: $(TZ=Asia/Tokyo date)" >> $GITHUB_STEP_SUMMARY
+          echo "ステータス: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
