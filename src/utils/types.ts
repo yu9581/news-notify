@@ -41,6 +41,7 @@ export interface Article {
 }
 
 export interface SummarizedArticle extends Article {
+  readonly titleJa: string
   readonly summary: string
   readonly importance: '高' | '中' | '低'
 }
