@@ -11,7 +11,8 @@
   "topics": [
     { "name": "AI", "keywords": ["artificial intelligence breakthrough", "AI news"], "lang": "en" },
     { "name": "LLM", "keywords": ["large language model", "ChatGPT", "Claude AI"], "lang": "en" },
-    { "name": "Anthropic", "keywords": ["Anthropic", "Anthropic AI", "Claude Anthropic"], "lang": "en" }
+    { "name": "Anthropic", "keywords": ["Anthropic", "Anthropic AI", "Claude Anthropic"], "lang": "en" },
+    { "name": "METR", "keywords": ["METR", "METR AI", "METR evaluation"], "lang": "en" }
   ],
   "feeds": [
     { "name": "TechCrunch", "url": "https://techcrunch.com/feed/", "filterKeywords": ["AI", "OpenAI"] },
