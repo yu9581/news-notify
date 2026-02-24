@@ -9,6 +9,7 @@ import {
   filterNewArticles,
   markAsSeen,
 } from './dedup/store.js'
+import { filterRecent, interleave } from './utils/article-utils.js'
 
 async function main(): Promise<void> {
   console.log('=== ニュース自動通知 開始 ===')
@@ -33,7 +34,13 @@ async function main(): Promise<void> {
   )
   console.log(`RSS: ${rssArticles.length}件`)
 
-  const allArticles = [...googleArticles, ...rssArticles]
+  // 直近24時間以内の記事のみ
+  const recentGoogle = filterRecent(googleArticles, 24)
+  const recentRss = filterRecent(rssArticles, 24)
+  console.log(`24時間以内: Google News ${recentGoogle.length}件, RSS ${recentRss.length}件`)
+
+  // ソースをバランスよく混ぜる
+  const allArticles = interleave(recentGoogle, recentRss)
   console.log(`合計: ${allArticles.length}件`)
 
   // 重複除外
