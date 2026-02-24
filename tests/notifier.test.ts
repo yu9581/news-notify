@@ -28,6 +28,7 @@ vi.mock('discord.js', () => ({
 
 const mockArticle: SummarizedArticle = {
   title: 'Test News Article',
+  titleJa: 'テストニュース記事',
   url: 'https://example.com/test',
   pubDate: new Date(),
   source: 'TestSource',
@@ -63,7 +64,7 @@ describe('createNotifier', () => {
     await notifier.notifyArticle(mockArticle)
 
     expect(mockChannelSend).toHaveBeenCalledWith(
-      expect.stringContaining('Test News Article')
+      expect.stringContaining('テストニュース記事')
     )
     expect(mockChannelSend).toHaveBeenCalledWith(
       expect.stringContaining('テストの要約です。')

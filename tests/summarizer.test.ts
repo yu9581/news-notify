@@ -18,6 +18,7 @@ vi.mock('@google/generative-ai', () => {
         generateContent: vi.fn().mockResolvedValue({
           response: {
             text: () => JSON.stringify({
+              titleJa: 'OpenAIが新モデルをリリース',
               summary: 'OpenAIが新しいモデルを発表しました。',
               importance: '高',
             }),
@@ -33,6 +34,7 @@ describe('createSummarizer', () => {
     const summarizer = createSummarizer('fake-api-key')
     const result = await summarizer.summarizeArticle(mockArticle)
 
+    expect(result.titleJa).toBe('OpenAIが新モデルをリリース')
     expect(result.summary).toBe('OpenAIが新しいモデルを発表しました。')
     expect(result.importance).toBe('高')
     expect(result.title).toBe(mockArticle.title)
@@ -57,7 +59,7 @@ describe('extractJSON (via summarizer)', () => {
       getGenerativeModel: vi.fn().mockReturnValue({
         generateContent: vi.fn().mockResolvedValue({
           response: {
-            text: () => '```json\n{"summary": "テスト要約", "importance": "中"}\n```',
+            text: () => '```json\n{"titleJa": "テストタイトル", "summary": "テスト要約", "importance": "中"}\n```',
           },
         }),
       }),
@@ -65,6 +67,7 @@ describe('extractJSON (via summarizer)', () => {
 
     const summarizer = createSummarizer('fake-api-key')
     const result = await summarizer.summarizeArticle(mockArticle)
+    expect(result.titleJa).toBe('テストタイトル')
     expect(result.summary).toBe('テスト要約')
   })
 
@@ -82,6 +85,7 @@ describe('extractJSON (via summarizer)', () => {
 
     const summarizer = createSummarizer('fake-api-key')
     const result = await summarizer.summarizeArticle(mockArticle)
+    expect(result.titleJa).toBe(mockArticle.title)
     expect(result.summary).toBe('要約の取得に失敗しました')
     expect(result.importance).toBe('中')
   })

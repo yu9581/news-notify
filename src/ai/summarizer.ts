@@ -9,11 +9,13 @@ URL: {url}
 
 以下のJSON形式のみで返してください（JSON以外のテキストは絶対に含めないでください）:
 {
+  "titleJa": "タイトルの日本語訳",
   "summary": "3〜5文の日本語要約",
   "importance": "高/中/低"
 }
 
 ルール:
+- titleJaはタイトルが英語の場合は自然な日本語に翻訳する。すでに日本語の場合はそのまま返す
 - 要約は日本語で3〜5文
 - 重要度は「高」「中」「低」のいずれか
 - AI業界への影響が大きいものは「高」
@@ -44,6 +46,7 @@ export function createSummarizer(apiKey: string) {
     if (!parsed) {
       return {
         ...article,
+        titleJa: article.title,
         summary: '要約の取得に失敗しました',
         importance: '中',
       }
@@ -51,6 +54,7 @@ export function createSummarizer(apiKey: string) {
 
     return {
       ...article,
+      titleJa: parsed.titleJa ?? article.title,
       summary: parsed.summary ?? '要約の取得に失敗しました',
       importance: parsed.importance ?? '中',
     }
@@ -73,6 +77,7 @@ export function createSummarizer(apiKey: string) {
         console.error(`  要約失敗: ${article.title} - ${message}`)
         results.push({
           ...article,
+          titleJa: article.title,
           summary: '要約の取得に失敗しました',
           importance: '中',
         })
