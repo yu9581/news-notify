@@ -3,11 +3,15 @@
     { "name": "Sam Altman", "keywords": ["Sam Altman"], "lang": "en" },
     { "name": "Elon Musk", "keywords": ["Elon Musk AI"], "lang": "en" },
     { "name": "深津貴之", "keywords": ["深津貴之", "fladdict"], "lang": "ja" },
-    { "name": "古川健介", "keywords": ["古川健介", "けんすう"], "lang": "ja" }
+    { "name": "古川健介", "keywords": ["古川健介", "けんすう"], "lang": "ja" },
+    { "name": "小澤隆生", "keywords": ["小澤隆生", "LINEヤフー CEO"], "lang": "ja" },
+    { "name": "孫正義", "keywords": ["孫正義", "Masayoshi Son", "ソフトバンク 孫"], "lang": "ja" },
+    { "name": "深井龍之介", "keywords": ["深井龍之介", "COTEN"], "lang": "ja" }
   ],
   "topics": [
     { "name": "AI", "keywords": ["artificial intelligence breakthrough", "AI news"], "lang": "en" },
-    { "name": "LLM", "keywords": ["large language model", "ChatGPT", "Claude AI"], "lang": "en" }
+    { "name": "LLM", "keywords": ["large language model", "ChatGPT", "Claude AI"], "lang": "en" },
+    { "name": "Anthropic", "keywords": ["Anthropic", "Anthropic AI", "Claude Anthropic"], "lang": "en" }
   ],
   "feeds": [
     { "name": "TechCrunch", "url": "https://techcrunch.com/feed/", "filterKeywords": ["AI", "OpenAI"] },
