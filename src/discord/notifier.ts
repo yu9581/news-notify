@@ -33,7 +33,7 @@ export function createNotifier(botToken: string, channelId: string) {
     const importanceEmoji = article.importance === '高' ? '🔴' : article.importance === '中' ? '🟡' : '🟢'
 
     const displayTitle = article.titleJa ?? article.title
-    const messageContent = `${categoryEmoji} **[${article.category}]** ${displayTitle}\n${article.summary}\n📌 出典: ${article.source} | 重要度: ${importanceEmoji} ${article.importance}`
+    const messageContent = `${categoryEmoji} **[${article.category}]**\n**${displayTitle}**\n📝 要約: ${article.summary}\n📌 出典: ${article.source} | 重要度: ${importanceEmoji} ${article.importance}`
 
     const message = await textChannel.send(messageContent)
 
