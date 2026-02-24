@@ -13,19 +13,28 @@
     { "name": "出口治明", "keywords": ["出口治明", "ライフネット生命"], "lang": "ja" },
     { "name": "西井敏恭", "keywords": ["西井敏恭", "シンクロ"], "lang": "ja" },
     { "name": "西口一希", "keywords": ["西口一希", "Strategy Partners"], "lang": "ja" },
-    { "name": "尾原和啓", "keywords": ["尾原和啓"], "lang": "ja" }
+    { "name": "尾原和啓", "keywords": ["尾原和啓"], "lang": "ja" },
+    { "name": "家入一真", "keywords": ["家入一真", "CAMPFIRE"], "lang": "ja" },
+    { "name": "田中修治", "keywords": ["田中修治", "OWNDAYS"], "lang": "ja" },
+    { "name": "成田悠輔", "keywords": ["成田悠輔"], "lang": "ja" },
+    { "name": "Jensen Huang", "keywords": ["Jensen Huang", "NVIDIA CEO"], "lang": "en" },
+    { "name": "Satya Nadella", "keywords": ["Satya Nadella", "Microsoft CEO"], "lang": "en" },
+    { "name": "Dario Amodei", "keywords": ["Dario Amodei", "Anthropic CEO"], "lang": "en" }
   ],
   "topics": [
     { "name": "AI", "keywords": ["artificial intelligence breakthrough", "AI news"], "lang": "en" },
     { "name": "LLM", "keywords": ["large language model", "ChatGPT", "Claude AI"], "lang": "en" },
     { "name": "Anthropic", "keywords": ["Anthropic", "Anthropic AI", "Claude Anthropic"], "lang": "en" },
     { "name": "METR", "keywords": ["METR", "METR AI", "METR evaluation"], "lang": "en" },
-    { "name": "上場承認", "keywords": ["上場承認", "IPO承認", "新規上場"], "lang": "ja" }
+    { "name": "上場承認", "keywords": ["上場承認", "IPO承認", "新規上場"], "lang": "ja" },
+    { "name": "VC・資金調達", "keywords": ["資金調達 スタートアップ", "シード ラウンド", "VC 出資"], "lang": "ja" }
   ],
   "feeds": [
     { "name": "TechCrunch", "url": "https://techcrunch.com/feed/", "filterKeywords": ["AI", "OpenAI"] },
     { "name": "The Verge AI", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml" },
-    { "name": "Hacker News AI", "url": "https://hnrss.org/newest?q=AI&points=50" }
+    { "name": "Hacker News AI", "url": "https://hnrss.org/newest?q=AI&points=50" },
+    { "name": "a16z blog", "url": "https://a16z.com/feed/" },
+    { "name": "First Round Review", "url": "https://review.firstround.com/feed.xml" }
   ],
   "settings": {
     "maxArticlesPerKeyword": 5,
