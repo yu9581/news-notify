@@ -9,7 +9,9 @@ export interface ArticleContent {
 }
 
 export async function fetchArticleContent(url: string): Promise<ArticleContent> {
-  const parsed = new URL(url)
+  const resolvedUrl = await resolveGoogleNewsUrl(url)
+
+  const parsed = new URL(resolvedUrl)
   if (!['http:', 'https:'].includes(parsed.protocol)) {
     throw new Error(`許可されていないプロトコルです: ${parsed.protocol}`)
   }
@@ -18,7 +20,7 @@ export async function fetchArticleContent(url: string): Promise<ArticleContent> 
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(resolvedUrl, {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)',
@@ -27,11 +29,46 @@ export async function fetchArticleContent(url: string): Promise<ArticleContent> 
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${url}`)
+      throw new Error(`HTTP ${response.status}: ${resolvedUrl}`)
     }
 
     const html = await response.text()
-    return extractContent(html, url)
+    return extractContent(html, resolvedUrl)
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function resolveGoogleNewsUrl(url: string): Promise<string> {
+  if (!url.includes('news.google.com/rss/articles/')) {
+    return url
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)',
+      },
+    })
+
+    if (response.url && response.url !== url) {
+      return response.url
+    }
+
+    const html = await response.text()
+    const match = html.match(/href="(https?:\/\/[^"]+)"[^>]*data-n-au/)
+      ?? html.match(/window\.location\.replace\("(https?:\/\/[^"]+)"\)/)
+      ?? html.match(/<a[^>]+href="(https?:\/\/(?!news\.google\.com)[^"]+)"/)
+    if (match) {
+      return match[1]
+    }
+
+    return url
   } finally {
     clearTimeout(timeout)
   }
