@@ -13,7 +13,10 @@ vi.mock('../src/ai/translator.js', () => ({
   }),
 }))
 
+const mockPendingMessage = { edit: vi.fn().mockResolvedValue(undefined) }
+
 vi.mock('../src/discord/thread-poster.js', () => ({
+  sendPendingMessage: vi.fn().mockResolvedValue(mockPendingMessage),
   postTranslationToThread: vi.fn().mockResolvedValue(undefined),
 }))
 
@@ -42,7 +45,8 @@ describe('translateAndPost', () => {
       client,
       'ch-1',
       'msg-1',
-      'これはテストコンテンツです。'
+      'これはテストコンテンツです。',
+      mockPendingMessage
     )
   })
 

@@ -1,7 +1,7 @@
 import type { Client } from 'discord.js'
 import { fetchArticleContent } from '../scraper/article-fetcher.js'
 import { createTranslator } from '../ai/translator.js'
-import { postTranslationToThread } from '../discord/thread-poster.js'
+import { sendPendingMessage, postTranslationToThread } from '../discord/thread-poster.js'
 
 export async function translateAndPost(
   client: Client,
@@ -12,10 +12,16 @@ export async function translateAndPost(
 ): Promise<boolean> {
   try {
     console.log(`  翻訳開始: ${articleUrl}`)
+
+    // 先に「翻訳しています...」を投稿
+    const pendingMessage = await sendPendingMessage(client, channelId, messageId)
+
     const { textContent } = await fetchArticleContent(articleUrl)
     const translator = createTranslator(geminiApiKey)
     const translated = await translator.translateArticle(textContent)
-    await postTranslationToThread(client, channelId, messageId, translated)
+
+    // 「翻訳しています...」を翻訳結果で上書き
+    await postTranslationToThread(client, channelId, messageId, translated, pendingMessage)
     console.log(`  翻訳投稿完了: ${articleUrl}`)
     return true
   } catch (error) {
