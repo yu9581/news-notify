@@ -12,7 +12,7 @@ const MIN_FEEDBACK_COUNT = 5
 
 const PROFILE_PROMPT = `以下は、あるカテゴリ「{category}」のニュース記事に対するユーザーのフィードバックです。
 
-⭕（関連あり・興味あり）と判定された記事:
+👀（関連あり・興味あり）と判定された記事:
 {positiveArticles}
 
 ❌（関連なし・興味なし）と判定された記事:
