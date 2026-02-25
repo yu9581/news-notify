@@ -6,25 +6,40 @@ const mockStartThread = vi.fn().mockResolvedValue({ send: mockThreadSend })
 const mockChannelSend = vi.fn().mockResolvedValue({ id: 'msg-123', startThread: mockStartThread })
 const mockDestroy = vi.fn()
 const mockLogin = vi.fn().mockResolvedValue(undefined)
-let mockOnceCallback: Function
 
-vi.mock('discord.js', () => ({
-  Client: vi.fn().mockImplementation(() => ({
-    login: mockLogin,
-    once: vi.fn().mockImplementation((_event: string, cb: Function) => {
-      mockOnceCallback = cb
-      cb()
-    }),
-    channels: {
-      fetch: vi.fn().mockResolvedValue({
-        send: mockChannelSend,
+vi.mock('discord.js', () => {
+  class MockEmbedBuilder {
+    data: Record<string, unknown> = {}
+
+    setColor(color: number) { this.data.color = color; return this }
+    setTitle(title: string) { this.data.title = title; return this }
+    setURL(url: string) { this.data.url = url; return this }
+    setDescription(desc: string) { this.data.description = desc; return this }
+    addFields(...fields: unknown[]) {
+      this.data.fields = [...((this.data.fields as unknown[]) || []), ...(fields as unknown[]).flat()]
+      return this
+    }
+    setImage(url: string) { this.data.image = { url }; return this }
+  }
+
+  return {
+    Client: vi.fn().mockImplementation(() => ({
+      login: mockLogin,
+      once: vi.fn().mockImplementation((_event: string, cb: Function) => {
+        cb()
       }),
-    },
-    user: { tag: 'TestBot#1234' },
-    destroy: mockDestroy,
-  })),
-  GatewayIntentBits: { Guilds: 1, GuildMessageReactions: 2 },
-}))
+      channels: {
+        fetch: vi.fn().mockResolvedValue({
+          send: mockChannelSend,
+        }),
+      },
+      user: { tag: 'TestBot#1234' },
+      destroy: mockDestroy,
+    })),
+    GatewayIntentBits: { Guilds: 1, GuildMessageReactions: 2 },
+    EmbedBuilder: MockEmbedBuilder,
+  }
+})
 
 const mockArticle: SummarizedArticle = {
   title: 'Test News Article',
@@ -38,6 +53,11 @@ const mockArticle: SummarizedArticle = {
   importance: '高',
   relevance: 85,
   relevanceReason: 'テスト理由',
+}
+
+function getLastEmbed() {
+  const lastCall = mockChannelSend.mock.calls[mockChannelSend.mock.calls.length - 1]
+  return lastCall[0].embeds[0]
 }
 
 describe('createNotifier', () => {
@@ -58,7 +78,7 @@ describe('createNotifier', () => {
     expect(mockDestroy).toHaveBeenCalled()
   })
 
-  it('記事を通知できる（メッセージに要約、スレッドにURL）', async () => {
+  it('記事をEmbed形式で通知できる', async () => {
     const { createNotifier } = await import('../src/discord/notifier.js')
     const notifier = createNotifier('fake-token', 'fake-channel')
     await notifier.connect()
@@ -67,55 +87,103 @@ describe('createNotifier', () => {
 
     expect(result.messageId).toBe('msg-123')
     expect(result.article).toBe(mockArticle)
-    expect(mockChannelSend).toHaveBeenCalledWith(
-      expect.stringContaining('テストニュース記事')
-    )
-    expect(mockChannelSend).toHaveBeenCalledWith(
-      expect.stringContaining('テストの要約です。')
-    )
-    expect(mockChannelSend).toHaveBeenCalledWith(
-      expect.stringContaining('関連度: 85%')
-    )
-    expect(mockChannelSend).toHaveBeenCalledWith(
-      expect.stringContaining('📌 出典: TestSource | 重要度: 🔴 高')
-    )
+
+    const embed = getLastEmbed()
+    expect(embed.data.title).toContain('テストニュース記事')
+    expect(embed.data.title).toContain('🤖')
+    expect(embed.data.url).toBe('https://example.com/test')
+    expect(embed.data.description).toContain('テストの要約です。')
+
+    const fields = embed.data.fields as { name: string; value: string }[]
+    expect(fields.find((f: { name: string }) => f.name === '出典')?.value).toBe('TestSource')
+    expect(fields.find((f: { name: string }) => f.name === '重要度')?.value).toContain('🔴')
+    expect(fields.find((f: { name: string }) => f.name === '関連度')?.value).toBe('85%')
+
     expect(mockStartThread).toHaveBeenCalledWith({
       name: 'Test News Article',
       autoArchiveDuration: 1440,
     })
-    expect(mockThreadSend).toHaveBeenCalledWith(
-      '🔗 https://example.com/test'
-    )
+    expect(mockThreadSend).toHaveBeenCalledWith('🔗 https://example.com/test')
   })
 
-  it('重要度に応じた絵文字を使う', async () => {
+  it('要約の句点で改行される', async () => {
+    const { createNotifier } = await import('../src/discord/notifier.js')
+    const notifier = createNotifier('fake-token', 'fake-channel')
+    await notifier.connect()
+
+    const article = {
+      ...mockArticle,
+      summary: '1文目です。2文目です。3文目です。',
+    }
+    await notifier.notifyArticle(article)
+
+    const embed = getLastEmbed()
+    expect(embed.data.description).toBe('1文目です。\n2文目です。\n3文目です。')
+  })
+
+  it('重要度に応じた色と絵文字を使う', async () => {
     const { createNotifier } = await import('../src/discord/notifier.js')
     const notifier = createNotifier('fake-token', 'fake-channel')
     await notifier.connect()
 
     await notifier.notifyArticle(mockArticle)
-    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🔴'))
+    let embed = getLastEmbed()
+    expect(embed.data.color).toBe(0xED4245)
+    let fields = embed.data.fields as { name: string; value: string }[]
+    expect(fields.find((f: { name: string }) => f.name === '重要度')?.value).toContain('🔴')
 
     await notifier.notifyArticle({ ...mockArticle, importance: '中' })
-    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🟡'))
+    embed = getLastEmbed()
+    expect(embed.data.color).toBe(0xFEE75C)
+    fields = embed.data.fields as { name: string; value: string }[]
+    expect(fields.find((f: { name: string }) => f.name === '重要度')?.value).toContain('🟡')
 
     await notifier.notifyArticle({ ...mockArticle, importance: '低' })
-    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🟢'))
+    embed = getLastEmbed()
+    expect(embed.data.color).toBe(0x57F287)
+    fields = embed.data.fields as { name: string; value: string }[]
+    expect(fields.find((f: { name: string }) => f.name === '重要度')?.value).toContain('🟢')
   })
 
-  it('カテゴリに応じた絵文字を使う', async () => {
+  it('カテゴリに応じた絵文字をタイトルに使う', async () => {
     const { createNotifier } = await import('../src/discord/notifier.js')
     const notifier = createNotifier('fake-token', 'fake-channel')
     await notifier.connect()
 
     await notifier.notifyArticle({ ...mockArticle, category: 'AI' })
-    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🤖'))
+    expect(getLastEmbed().data.title).toContain('🤖')
 
     await notifier.notifyArticle({ ...mockArticle, category: 'LLM' })
-    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('🧠'))
+    expect(getLastEmbed().data.title).toContain('🧠')
 
     await notifier.notifyArticle({ ...mockArticle, category: 'Unknown' })
-    expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('📌'))
+    expect(getLastEmbed().data.title).toContain('📌')
+  })
+
+  it('OGP画像がある場合はEmbedに画像を設定する', async () => {
+    const { createNotifier } = await import('../src/discord/notifier.js')
+    const notifier = createNotifier('fake-token', 'fake-channel')
+    await notifier.connect()
+
+    const articleWithImage = {
+      ...mockArticle,
+      ogImage: 'https://example.com/og-image.jpg',
+    }
+    await notifier.notifyArticle(articleWithImage)
+
+    const embed = getLastEmbed()
+    expect(embed.data.image).toEqual({ url: 'https://example.com/og-image.jpg' })
+  })
+
+  it('OGP画像がない場合は画像なしで通知する', async () => {
+    const { createNotifier } = await import('../src/discord/notifier.js')
+    const notifier = createNotifier('fake-token', 'fake-channel')
+    await notifier.connect()
+
+    await notifier.notifyArticle(mockArticle)
+
+    const embed = getLastEmbed()
+    expect(embed.data.image).toBeUndefined()
   })
 
   it('複数記事を通知し送信数と結果を返す', async () => {
