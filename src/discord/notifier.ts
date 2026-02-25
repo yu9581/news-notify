@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from 'discord.js'
+import { Client, GatewayIntentBits, EmbedBuilder } from 'discord.js'
 import type { SummarizedArticle } from '../utils/types.js'
 
 export interface NotificationResult {
@@ -6,8 +6,13 @@ export interface NotificationResult {
   readonly article: SummarizedArticle
 }
 
-interface TextSendable {
-  send(content: string): Promise<{ id: string; startThread(opts: { name: string; autoArchiveDuration: number }): Promise<{ send(content: string): Promise<unknown> }> }>
+interface EmbedSendable {
+  send(options: { embeds: EmbedBuilder[] }): Promise<{
+    id: string
+    startThread(opts: { name: string; autoArchiveDuration: number }): Promise<{
+      send(content: string): Promise<unknown>
+    }>
+  }>
 }
 
 export function createNotifier(botToken: string, channelId: string) {
@@ -39,16 +44,31 @@ export function createNotifier(botToken: string, channelId: string) {
       throw new Error(`チャンネル ${channelId} が見つからないか、テキストチャンネルではありません`)
     }
 
-    const textChannel = channel as unknown as TextSendable
+    const textChannel = channel as unknown as EmbedSendable
 
     const categoryEmoji = getCategoryEmoji(article.category)
     const importanceEmoji = article.importance === '高' ? '🔴' : article.importance === '中' ? '🟡' : '🟢'
+    const importanceColor = article.importance === '高' ? 0xED4245 : article.importance === '中' ? 0xFEE75C : 0x57F287
 
     const displayTitle = article.titleJa ?? article.title
-    const relevanceDisplay = `関連度: ${article.relevance}%`
-    const messageContent = `${categoryEmoji} **[${article.category}]**\n**${displayTitle}**\n📝 要約: ${article.summary}\n📌 出典: ${article.source} | 重要度: ${importanceEmoji} ${article.importance} | ${relevanceDisplay}`
+    const formattedSummary = article.summary.replace(/。(?!$)/g, '。\n')
 
-    const message = await textChannel.send(messageContent)
+    const embed = new EmbedBuilder()
+      .setColor(importanceColor)
+      .setTitle(`${categoryEmoji} [${article.category}] ${displayTitle}`)
+      .setURL(article.url)
+      .setDescription(formattedSummary)
+      .addFields(
+        { name: '出典', value: article.source, inline: true },
+        { name: '重要度', value: `${importanceEmoji} ${article.importance}`, inline: true },
+        { name: '関連度', value: `${article.relevance}%`, inline: true },
+      )
+
+    if (article.ogImage) {
+      embed.setImage(article.ogImage)
+    }
+
+    const message = await textChannel.send({ embeds: [embed] })
 
     const thread = await message.startThread({
       name: article.title.slice(0, 100),
