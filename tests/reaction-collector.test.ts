@@ -242,6 +242,165 @@ describe('collectReactions', () => {
     expect(result.articles[0].feedback).toBe('positive')
   })
 
+  it('翻訳成功時に translated: true が記録される', async () => {
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+      }],
+      lastUpdated: '',
+    }
+
+    const reactions = new Map([
+      ['👀', { count: 1 }],
+    ])
+    const client = createMockClient(reactions)
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(result.articles[0].translated).toBe(true)
+  })
+
+  it('翻訳失敗時に translated: false が記録される', async () => {
+    const { fetchArticleContent } = await import('../src/scraper/article-fetcher.js')
+    vi.mocked(fetchArticleContent).mockRejectedValueOnce(new Error('Network error'))
+
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+      }],
+      lastUpdated: '',
+    }
+
+    const reactions = new Map([
+      ['👀', { count: 1 }],
+    ])
+    const client = createMockClient(reactions)
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(result.articles[0].translated).toBe(false)
+  })
+
+  it('translated: false の記事が次回リトライされる', async () => {
+    const { postTranslationToThread } = await import('../src/discord/thread-poster.js')
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive',
+        translated: false,
+      }],
+      lastUpdated: '',
+    }
+
+    const client = createMockClient(new Map())
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(postTranslationToThread).toHaveBeenCalledWith(
+      client,
+      'ch-id',
+      'msg-1',
+      'これはテストコンテンツです。'
+    )
+    expect(result.articles[0].translated).toBe(true)
+  })
+
+  it('リトライ成功時に translated: true に更新される', async () => {
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive',
+        translated: false,
+      }],
+      lastUpdated: '',
+    }
+
+    const client = createMockClient(new Map())
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(result.articles[0].translated).toBe(true)
+  })
+
+  it('retryCount が3回に達した記事はリトライされない', async () => {
+    const { postTranslationToThread } = await import('../src/discord/thread-poster.js')
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive',
+        translated: false,
+        retryCount: 3,
+      }],
+      lastUpdated: '',
+    }
+
+    const client = createMockClient(new Map())
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(postTranslationToThread).not.toHaveBeenCalled()
+    expect(result.articles[0].translated).toBe(false)
+    expect(result.articles[0].retryCount).toBe(3)
+  })
+
+  it('リトライ失敗時に retryCount がカウントアップされる', async () => {
+    const { fetchArticleContent } = await import('../src/scraper/article-fetcher.js')
+    vi.mocked(fetchArticleContent).mockRejectedValueOnce(new Error('Network error'))
+
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive',
+        translated: false,
+        retryCount: 1,
+      }],
+      lastUpdated: '',
+    }
+
+    const client = createMockClient(new Map())
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(result.articles[0].translated).toBe(false)
+    expect(result.articles[0].retryCount).toBe(2)
+  })
+
   it('メッセージ取得でエラーが出てもスキップして続行する', async () => {
     const { collectReactions } = await import('../src/feedback/reaction-collector.js')
     const store: FeedbackStore = {

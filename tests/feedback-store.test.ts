@@ -133,6 +133,91 @@ describe('feedback-store', () => {
     expect(cleaned.articles[0].messageId).toBe('2')
   })
 
+  it('translated: true を記録できる', async () => {
+    const { updateArticleTranslated } = await import('../src/feedback/feedback-store.js')
+    const store = {
+      articles: [{
+        messageId: '123',
+        articleUrl: 'https://example.com/test',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive' as const,
+      }],
+      lastUpdated: '',
+    }
+
+    const updated = updateArticleTranslated(store, '123', true)
+
+    expect(updated.articles[0].translated).toBe(true)
+  })
+
+  it('翻訳失敗時に retryCount がカウントアップされる', async () => {
+    const { updateArticleTranslated } = await import('../src/feedback/feedback-store.js')
+    const store = {
+      articles: [{
+        messageId: '123',
+        articleUrl: 'https://example.com/test',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive' as const,
+        translated: false,
+        retryCount: 1,
+      }],
+      lastUpdated: '',
+    }
+
+    const updated = updateArticleTranslated(store, '123', false)
+
+    expect(updated.articles[0].retryCount).toBe(2)
+  })
+
+  it('翻訳成功時に retryCount はリセットされない', async () => {
+    const { updateArticleTranslated } = await import('../src/feedback/feedback-store.js')
+    const store = {
+      articles: [{
+        messageId: '123',
+        articleUrl: 'https://example.com/test',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive' as const,
+        translated: false,
+        retryCount: 2,
+      }],
+      lastUpdated: '',
+    }
+
+    const updated = updateArticleTranslated(store, '123', true)
+
+    expect(updated.articles[0].translated).toBe(true)
+    expect(updated.articles[0].retryCount).toBe(2)
+  })
+
+  it('translated: false を記録できる', async () => {
+    const { updateArticleTranslated } = await import('../src/feedback/feedback-store.js')
+    const store = {
+      articles: [{
+        messageId: '123',
+        articleUrl: 'https://example.com/test',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive' as const,
+      }],
+      lastUpdated: '',
+    }
+
+    const updated = updateArticleTranslated(store, '123', false)
+
+    expect(updated.articles[0].translated).toBe(false)
+  })
+
   it('既存の記事にimmutableに追加される', async () => {
     const { addNotifiedArticles } = await import('../src/feedback/feedback-store.js')
     const existing = {

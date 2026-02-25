@@ -11,6 +11,8 @@ export interface NotifiedArticle {
   readonly relevance: number
   readonly notifiedAt: string
   readonly feedback?: 'positive' | 'negative'
+  readonly translated?: boolean
+  readonly retryCount?: number
 }
 
 export interface FeedbackStore {
@@ -63,6 +65,23 @@ export function updateArticleFeedback(
     articles: store.articles.map(a =>
       a.messageId === messageId ? { ...a, feedback } : a
     ),
+    lastUpdated: new Date().toISOString(),
+  }
+}
+
+export function updateArticleTranslated(
+  store: FeedbackStore,
+  messageId: string,
+  translated: boolean
+): FeedbackStore {
+  return {
+    ...store,
+    articles: store.articles.map(a => {
+      if (a.messageId !== messageId) return a
+      return translated
+        ? { ...a, translated }
+        : { ...a, translated, retryCount: (a.retryCount ?? 0) + 1 }
+    }),
     lastUpdated: new Date().toISOString(),
   }
 }

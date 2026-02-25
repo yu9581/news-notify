@@ -1,6 +1,6 @@
 import type { Client } from 'discord.js'
 import type { FeedbackStore } from './feedback-store.js'
-import { updateArticleFeedback, cleanOldArticles } from './feedback-store.js'
+import { updateArticleFeedback, updateArticleTranslated, cleanOldArticles } from './feedback-store.js'
 import { fetchArticleContent } from '../scraper/article-fetcher.js'
 import { createTranslator } from '../ai/translator.js'
 import { postTranslationToThread } from '../discord/thread-poster.js'
@@ -18,17 +18,29 @@ export async function collectReactions(
   store: FeedbackStore,
   options: CollectReactionsOptions = {}
 ): Promise<FeedbackStore> {
+  // 翻訳失敗した記事のリトライ
+  let updatedStore = store
+  if (options.geminiApiKey) {
+    const MAX_RETRIES = 3
+    const retryArticles = store.articles.filter(
+      a => a.feedback === 'positive' && a.translated === false && (a.retryCount ?? 0) < MAX_RETRIES
+    )
+    for (const article of retryArticles) {
+      const success = await translateAndPost(client, channelId, article.messageId, article.articleUrl, options.geminiApiKey)
+      updatedStore = updateArticleTranslated(updatedStore, article.messageId, success)
+    }
+  }
+
   // フィードバック未取得の記事のみ対象
-  const pendingArticles = store.articles.filter(a => a.feedback === undefined)
+  const pendingArticles = updatedStore.articles.filter(a => a.feedback === undefined)
 
   if (pendingArticles.length === 0) {
     console.log('  フィードバック待ちの記事なし')
-    return cleanOldArticles(store, 30)
+    return cleanOldArticles(updatedStore, 30)
   }
 
   console.log(`  フィードバック待ち: ${pendingArticles.length}件`)
 
-  let updatedStore = store
   let collectedCount = 0
 
   for (const article of pendingArticles) {
@@ -55,7 +67,8 @@ export async function collectReactions(
 
         // 👀の記事を翻訳してスレッドに投稿
         if (options.geminiApiKey) {
-          await translateAndPost(client, channelId, article.messageId, article.articleUrl, options.geminiApiKey)
+          const success = await translateAndPost(client, channelId, article.messageId, article.articleUrl, options.geminiApiKey)
+          updatedStore = updateArticleTranslated(updatedStore, article.messageId, success)
         }
       } else if (negativeCount > 0) {
         updatedStore = updateArticleFeedback(updatedStore, article.messageId, 'negative')
@@ -80,7 +93,7 @@ async function translateAndPost(
   messageId: string,
   articleUrl: string,
   geminiApiKey: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     console.log(`  翻訳開始: ${articleUrl}`)
     const { textContent } = await fetchArticleContent(articleUrl)
@@ -88,8 +101,10 @@ async function translateAndPost(
     const translated = await translator.translateArticle(textContent)
     await postTranslationToThread(client, channelId, messageId, translated)
     console.log(`  翻訳投稿完了: ${articleUrl}`)
+    return true
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.log(`  翻訳スキップ (${articleUrl}): ${msg}`)
+    return false
   }
 }
