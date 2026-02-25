@@ -47,7 +47,6 @@ export interface SummarizedArticle extends Article {
   readonly importance: '高' | '中' | '低'
   readonly relevance: number
   readonly relevanceReason: string
-  readonly ogImage?: string
 }
 
 export interface SeenArticle {

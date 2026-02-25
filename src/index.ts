@@ -14,7 +14,6 @@ import { filterRecent, interleave } from './utils/article-utils.js'
 import { collectReactions } from './feedback/reaction-collector.js'
 import { loadFeedbackStore, saveFeedbackStore, addNotifiedArticles } from './feedback/feedback-store.js'
 import { updateProfileIfNeeded, loadLearningProfile } from './feedback/profile-updater.js'
-import { fetchOgImage } from './utils/og-image.js'
 
 async function main(): Promise<void> {
   console.log('=== ニュース自動通知 開始 ===')
@@ -97,23 +96,9 @@ async function main(): Promise<void> {
       console.log(`  除外: [${article.category}] ${article.titleJa} (関連度: ${article.relevance}%, 理由: ${article.relevanceReason})`)
     }
 
-    // OGP画像取得
-    console.log('\n--- OGP画像取得 ---')
-    const articlesWithImages = await Promise.all(
-      passed.map(async (article) => {
-        const ogImage = await fetchOgImage(article.url)
-        if (ogImage) {
-          console.log(`  画像取得: ${article.titleJa?.slice(0, 30)}`)
-        }
-        return ogImage ? { ...article, ogImage } : article
-      })
-    )
-    const imageCount = articlesWithImages.filter(a => a.ogImage).length
-    console.log(`OGP画像: ${imageCount}/${articlesWithImages.length}件`)
-
     // Discord通知
     console.log('\n--- Discord通知 ---')
-    const { sent: sentCount, results: notificationResults } = await notifier.notifyArticles(articlesWithImages)
+    const { sent: sentCount, results: notificationResults } = await notifier.notifyArticles(passed)
     console.log(`通知完了: ${sentCount}件`)
 
     // フィードバックストアに通知済み記事を追加（Phase 2）

@@ -64,10 +64,6 @@ export function createNotifier(botToken: string, channelId: string) {
         { name: '関連度', value: `${article.relevance}%`, inline: true },
       )
 
-    if (article.ogImage) {
-      embed.setImage(article.ogImage)
-    }
-
     const message = await textChannel.send({ embeds: [embed] })
 
     const thread = await message.startThread({

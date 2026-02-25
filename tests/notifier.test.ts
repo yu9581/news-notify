@@ -160,32 +160,6 @@ describe('createNotifier', () => {
     expect(getLastEmbed().data.title).toContain('📌')
   })
 
-  it('OGP画像がある場合はEmbedに画像を設定する', async () => {
-    const { createNotifier } = await import('../src/discord/notifier.js')
-    const notifier = createNotifier('fake-token', 'fake-channel')
-    await notifier.connect()
-
-    const articleWithImage = {
-      ...mockArticle,
-      ogImage: 'https://example.com/og-image.jpg',
-    }
-    await notifier.notifyArticle(articleWithImage)
-
-    const embed = getLastEmbed()
-    expect(embed.data.image).toEqual({ url: 'https://example.com/og-image.jpg' })
-  })
-
-  it('OGP画像がない場合は画像なしで通知する', async () => {
-    const { createNotifier } = await import('../src/discord/notifier.js')
-    const notifier = createNotifier('fake-token', 'fake-channel')
-    await notifier.connect()
-
-    await notifier.notifyArticle(mockArticle)
-
-    const embed = getLastEmbed()
-    expect(embed.data.image).toBeUndefined()
-  })
-
   it('複数記事を通知し送信数と結果を返す', async () => {
     const { createNotifier } = await import('../src/discord/notifier.js')
     const notifier = createNotifier('fake-token', 'fake-channel')
