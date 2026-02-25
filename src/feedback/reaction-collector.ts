@@ -46,8 +46,8 @@ export async function collectReactions(
         (_r: { count: number }, key: string) => key === NEGATIVE_EMOJI
       )
 
-      const positiveCount = positiveReaction ? positiveReaction.count - 1 : 0 // Bot自身の分を除く
-      const negativeCount = negativeReaction ? negativeReaction.count - 1 : 0
+      const positiveCount = positiveReaction ? positiveReaction.count : 0
+      const negativeCount = negativeReaction ? negativeReaction.count : 0
 
       if (positiveCount > 0 && positiveCount >= negativeCount) {
         updatedStore = updateArticleFeedback(updatedStore, article.messageId, 'positive')

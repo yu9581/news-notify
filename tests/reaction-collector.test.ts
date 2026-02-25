@@ -81,7 +81,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['👀', { count: 2 }], // 1 = Bot自身, 1 = ユーザー
+      ['👀', { count: 1 }],
     ])
     const client = createMockClient(reactions)
 
@@ -105,7 +105,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['❌', { count: 2 }],
+      ['❌', { count: 1 }],
     ])
     const client = createMockClient(reactions)
 
@@ -175,7 +175,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['👀', { count: 2 }],
+      ['👀', { count: 1 }],
     ])
     const client = createMockClient(reactions)
 
@@ -205,7 +205,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['👀', { count: 2 }],
+      ['👀', { count: 1 }],
     ])
     const client = createMockClient(reactions)
 
@@ -232,7 +232,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['👀', { count: 2 }],
+      ['👀', { count: 1 }],
     ])
     const client = createMockClient(reactions)
 
