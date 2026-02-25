@@ -41,6 +41,7 @@
     "maxTotalArticles": 30,
     "fetchDelayMs": 500,
     "summaryMaxTokens": 2048,
-    "deduplicationDays": 7
+    "deduplicationDays": 7,
+    "relevanceThreshold": 50
   }
 }

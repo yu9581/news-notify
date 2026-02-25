@@ -1,14 +1,26 @@
 import { Client, GatewayIntentBits } from 'discord.js'
 import type { SummarizedArticle } from '../utils/types.js'
 
+export interface NotificationResult {
+  readonly messageId: string
+  readonly article: SummarizedArticle
+}
+
 interface TextSendable {
-  send(content: string): Promise<{ startThread(opts: { name: string; autoArchiveDuration: number }): Promise<{ send(content: string): Promise<unknown> }> }>
+  send(content: string): Promise<{ id: string; startThread(opts: { name: string; autoArchiveDuration: number }): Promise<{ send(content: string): Promise<unknown> }> }>
 }
 
 export function createNotifier(botToken: string, channelId: string) {
   const client = new Client({
-    intents: [GatewayIntentBits.Guilds],
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessageReactions,
+    ],
   })
+
+  function getClient() {
+    return client
+  }
 
   async function connect(): Promise<void> {
     await client.login(botToken)
@@ -20,7 +32,7 @@ export function createNotifier(botToken: string, channelId: string) {
     })
   }
 
-  async function notifyArticle(article: SummarizedArticle): Promise<void> {
+  async function notifyArticle(article: SummarizedArticle): Promise<NotificationResult> {
     const channel = await client.channels.fetch(channelId)
 
     if (!channel || !('send' in channel)) {
@@ -33,7 +45,8 @@ export function createNotifier(botToken: string, channelId: string) {
     const importanceEmoji = article.importance === '高' ? '🔴' : article.importance === '中' ? '🟡' : '🟢'
 
     const displayTitle = article.titleJa ?? article.title
-    const messageContent = `${categoryEmoji} **[${article.category}]**\n**${displayTitle}**\n📝 要約: ${article.summary}\n📌 出典: ${article.source} | 重要度: ${importanceEmoji} ${article.importance}`
+    const relevanceDisplay = `関連度: ${article.relevance}%`
+    const messageContent = `${categoryEmoji} **[${article.category}]**\n**${displayTitle}**\n📝 要約: ${article.summary}\n📌 出典: ${article.source} | 重要度: ${importanceEmoji} ${article.importance} | ${relevanceDisplay}`
 
     const message = await textChannel.send(messageContent)
 
@@ -43,13 +56,17 @@ export function createNotifier(botToken: string, channelId: string) {
     })
 
     await thread.send(`🔗 ${article.url}`)
+
+    return { messageId: message.id, article }
   }
 
-  async function notifyArticles(articles: readonly SummarizedArticle[]): Promise<number> {
+  async function notifyArticles(articles: readonly SummarizedArticle[]): Promise<{ sent: number; results: NotificationResult[] }> {
     let sent = 0
+    const results: NotificationResult[] = []
     for (const article of articles) {
       try {
-        await notifyArticle(article)
+        const result = await notifyArticle(article)
+        results.push(result)
         sent++
         await sleep(1000)
       } catch (error) {
@@ -57,7 +74,7 @@ export function createNotifier(botToken: string, channelId: string) {
         console.error(`  通知失敗: ${article.title} - ${message}`)
       }
     }
-    return sent
+    return { sent, results }
   }
 
   async function disconnect(): Promise<void> {
@@ -65,7 +82,7 @@ export function createNotifier(botToken: string, channelId: string) {
     console.log('Discord Bot 切断完了')
   }
 
-  return { connect, notifyArticle, notifyArticles, disconnect }
+  return { connect, notifyArticle, notifyArticles, disconnect, getClient }
 }
 
 function getCategoryEmoji(category: string): string {

@@ -1,17 +1,23 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { Article, SummarizedArticle } from '../utils/types.js'
+import { extractJSON } from '../utils/json-parser.js'
 
-const SUMMARY_PROMPT = `以下のニュース記事を日本語で簡潔に要約してください。
+const SUMMARY_PROMPT = `以下のニュース記事を日本語で簡潔に要約し、指定されたカテゴリ/キーワードとの関連度を評価してください。
 
 タイトル: {title}
 出典: {source}
 URL: {url}
+カテゴリ: {category}
+検索キーワード: {keyword}
+{learningProfile}
 
 以下のJSON形式のみで返してください（JSON以外のテキストは絶対に含めないでください）:
 {
   "titleJa": "タイトルの日本語訳",
   "summary": "3〜5文の日本語要約",
-  "importance": "高/中/低"
+  "importance": "高/中/低",
+  "relevance": 0〜100の数値,
+  "relevanceReason": "関連度の判定理由"
 }
 
 ルール:
@@ -20,9 +26,22 @@ URL: {url}
 - 重要度は「高」「中」「低」のいずれか
 - AI業界への影響が大きいものは「高」
 - 一般的なニュースは「中」
-- 軽微な更新は「低」`
+- 軽微な更新は「低」
 
-export function createSummarizer(apiKey: string) {
+関連度評価ルール:
+- relevanceは0〜100の整数で、カテゴリ/キーワードとの関連度を示す
+- 100: カテゴリの人物/トピックが記事の主題である
+- 70-99: カテゴリの人物/トピックに直接言及がある
+- 40-69: 間接的に関連がある（同じ業界・分野のニュース）
+- 0-39: ほぼ無関係（キーワードが偶然一致しただけ）
+- 例: カテゴリ「家入一真」でキーワード「CAMPFIRE」の場合、CAMPFIRE社のニュースでも家入一真氏への言及がなければ関連度は低い（20〜40程度）
+- relevanceReasonには判定理由を1文で記載する`
+
+export interface LearningProfile {
+  readonly [category: string]: string
+}
+
+export function createSummarizer(apiKey: string, learningProfile: LearningProfile = {}) {
   const genAI = new GoogleGenerativeAI(apiKey)
 
   async function summarizeArticle(article: Article): Promise<SummarizedArticle> {
@@ -34,10 +53,17 @@ export function createSummarizer(apiKey: string) {
       },
     })
 
+    const profileText = learningProfile[article.category]
+      ? `\n学習済みの傾向:\n${learningProfile[article.category]}`
+      : ''
+
     const prompt = SUMMARY_PROMPT
       .replace('{title}', article.title)
       .replace('{source}', article.source)
       .replace('{url}', article.url)
+      .replace('{category}', article.category)
+      .replace('{keyword}', article.keyword)
+      .replace('{learningProfile}', profileText)
 
     const result = await model.generateContent(prompt)
     const text = result.response.text()
@@ -49,14 +75,22 @@ export function createSummarizer(apiKey: string) {
         titleJa: article.title,
         summary: '要約の取得に失敗しました',
         importance: '中',
+        relevance: 50,
+        relevanceReason: '関連度の評価に失敗しました',
       }
     }
 
+    const rawImportance = String(parsed.importance ?? '中')
+    const importance = (['高', '中', '低'].includes(rawImportance) ? rawImportance : '中') as '高' | '中' | '低'
+    const relevance = Math.min(100, Math.max(0, Number(parsed.relevance) || 50))
+
     return {
       ...article,
-      titleJa: parsed.titleJa ?? article.title,
-      summary: parsed.summary ?? '要約の取得に失敗しました',
-      importance: parsed.importance ?? '中',
+      titleJa: String(parsed.titleJa ?? article.title),
+      summary: String(parsed.summary ?? '要約の取得に失敗しました'),
+      importance,
+      relevance,
+      relevanceReason: String(parsed.relevanceReason ?? '判定理由なし'),
     }
   }
 
@@ -80,6 +114,8 @@ export function createSummarizer(apiKey: string) {
           titleJa: article.title,
           summary: '要約の取得に失敗しました',
           importance: '中',
+          relevance: 50,
+          relevanceReason: '要約処理でエラーが発生',
         })
       }
     }
@@ -88,28 +124,6 @@ export function createSummarizer(apiKey: string) {
   }
 
   return { summarizeArticle, summarizeArticles }
-}
-
-function extractJSON(text: string): Record<string, string> | null {
-  try {
-    return JSON.parse(text)
-  } catch { /* empty */ }
-
-  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1].trim())
-    } catch { /* empty */ }
-  }
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[0])
-    } catch { /* empty */ }
-  }
-
-  return null
 }
 
 function sleep(ms: number): Promise<void> {

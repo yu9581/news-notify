@@ -21,6 +21,8 @@ vi.mock('@google/generative-ai', () => {
               titleJa: 'OpenAIが新モデルをリリース',
               summary: 'OpenAIが新しいモデルを発表しました。',
               importance: '高',
+              relevance: 85,
+              relevanceReason: 'AI業界の主要ニュース',
             }),
           },
         }),
@@ -37,6 +39,8 @@ describe('createSummarizer', () => {
     expect(result.titleJa).toBe('OpenAIが新モデルをリリース')
     expect(result.summary).toBe('OpenAIが新しいモデルを発表しました。')
     expect(result.importance).toBe('高')
+    expect(result.relevance).toBe(85)
+    expect(result.relevanceReason).toBe('AI業界の主要ニュース')
     expect(result.title).toBe(mockArticle.title)
     expect(result.url).toBe(mockArticle.url)
   })
@@ -59,7 +63,7 @@ describe('extractJSON (via summarizer)', () => {
       getGenerativeModel: vi.fn().mockReturnValue({
         generateContent: vi.fn().mockResolvedValue({
           response: {
-            text: () => '```json\n{"titleJa": "テストタイトル", "summary": "テスト要約", "importance": "中"}\n```',
+            text: () => '```json\n{"titleJa": "テストタイトル", "summary": "テスト要約", "importance": "中", "relevance": 60, "relevanceReason": "テスト"}\n```',
           },
         }),
       }),
@@ -69,6 +73,7 @@ describe('extractJSON (via summarizer)', () => {
     const result = await summarizer.summarizeArticle(mockArticle)
     expect(result.titleJa).toBe('テストタイトル')
     expect(result.summary).toBe('テスト要約')
+    expect(result.relevance).toBe(60)
   })
 
   it('パース失敗時はフォールバックを返す', async () => {
@@ -88,5 +93,7 @@ describe('extractJSON (via summarizer)', () => {
     expect(result.titleJa).toBe(mockArticle.title)
     expect(result.summary).toBe('要約の取得に失敗しました')
     expect(result.importance).toBe('中')
+    expect(result.relevance).toBe(50)
+    expect(result.relevanceReason).toBe('関連度の評価に失敗しました')
   })
 })

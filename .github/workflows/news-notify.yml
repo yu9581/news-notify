@@ -28,10 +28,13 @@ jobs:
       - name: 既読データを復元
         uses: actions/cache@v4
         with:
-          path: data/seen-articles.json
-          key: seen-articles-${{ github.run_id }}
+          path: |
+            data/seen-articles.json
+            data/feedback.json
+            data/learning-profile.json
+          key: news-data-${{ github.run_id }}
           restore-keys: |
-            seen-articles-
+            news-data-
 
       - name: ニュース通知を実行
         env:

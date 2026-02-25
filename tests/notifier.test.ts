@@ -3,7 +3,7 @@ import type { SummarizedArticle } from '../src/utils/types.js'
 
 const mockThreadSend = vi.fn().mockResolvedValue(undefined)
 const mockStartThread = vi.fn().mockResolvedValue({ send: mockThreadSend })
-const mockChannelSend = vi.fn().mockResolvedValue({ startThread: mockStartThread })
+const mockChannelSend = vi.fn().mockResolvedValue({ id: 'msg-123', startThread: mockStartThread })
 const mockDestroy = vi.fn()
 const mockLogin = vi.fn().mockResolvedValue(undefined)
 let mockOnceCallback: Function
@@ -23,7 +23,7 @@ vi.mock('discord.js', () => ({
     user: { tag: 'TestBot#1234' },
     destroy: mockDestroy,
   })),
-  GatewayIntentBits: { Guilds: 1 },
+  GatewayIntentBits: { Guilds: 1, GuildMessageReactions: 2 },
 }))
 
 const mockArticle: SummarizedArticle = {
@@ -36,12 +36,14 @@ const mockArticle: SummarizedArticle = {
   keyword: 'AI',
   summary: 'テストの要約です。',
   importance: '高',
+  relevance: 85,
+  relevanceReason: 'テスト理由',
 }
 
 describe('createNotifier', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockChannelSend.mockResolvedValue({ startThread: mockStartThread })
+    mockChannelSend.mockResolvedValue({ id: 'msg-123', startThread: mockStartThread })
     mockStartThread.mockResolvedValue({ send: mockThreadSend })
   })
 
@@ -61,13 +63,18 @@ describe('createNotifier', () => {
     const notifier = createNotifier('fake-token', 'fake-channel')
     await notifier.connect()
 
-    await notifier.notifyArticle(mockArticle)
+    const result = await notifier.notifyArticle(mockArticle)
 
+    expect(result.messageId).toBe('msg-123')
+    expect(result.article).toBe(mockArticle)
     expect(mockChannelSend).toHaveBeenCalledWith(
       expect.stringContaining('テストニュース記事')
     )
     expect(mockChannelSend).toHaveBeenCalledWith(
       expect.stringContaining('テストの要約です。')
+    )
+    expect(mockChannelSend).toHaveBeenCalledWith(
+      expect.stringContaining('関連度: 85%')
     )
     expect(mockChannelSend).toHaveBeenCalledWith(
       expect.stringContaining('📌 出典: TestSource | 重要度: 🔴 高')
@@ -111,7 +118,7 @@ describe('createNotifier', () => {
     expect(mockChannelSend).toHaveBeenCalledWith(expect.stringContaining('📌'))
   })
 
-  it('複数記事を通知し送信数を返す', async () => {
+  it('複数記事を通知し送信数と結果を返す', async () => {
     const { createNotifier } = await import('../src/discord/notifier.js')
     const notifier = createNotifier('fake-token', 'fake-channel')
     await notifier.connect()
@@ -121,8 +128,10 @@ describe('createNotifier', () => {
       { ...mockArticle, title: 'Article 2' },
     ]
 
-    const count = await notifier.notifyArticles(articles)
-    expect(count).toBe(2)
+    const { sent, results } = await notifier.notifyArticles(articles)
+    expect(sent).toBe(2)
+    expect(results).toHaveLength(2)
+    expect(results[0].messageId).toBe('msg-123')
   })
 
   it('通知失敗時もカウントせず続行する', async () => {
@@ -139,8 +148,9 @@ describe('createNotifier', () => {
       { ...mockArticle, title: 'Article 2' },
     ]
 
-    const count = await notifier.notifyArticles(articles)
-    expect(count).toBe(1)
+    const { sent, results } = await notifier.notifyArticles(articles)
+    expect(sent).toBe(1)
+    expect(results).toHaveLength(1)
     expect(consoleSpy).toHaveBeenCalled()
   })
 
