@@ -5,7 +5,7 @@ import { fetchArticleContent } from '../scraper/article-fetcher.js'
 import { createTranslator } from '../ai/translator.js'
 import { postTranslationToThread } from '../discord/thread-poster.js'
 
-const POSITIVE_EMOJI = '⭕'
+const POSITIVE_EMOJI = '👀'
 const NEGATIVE_EMOJI = '❌'
 
 export interface CollectReactionsOptions {
@@ -53,7 +53,7 @@ export async function collectReactions(
         updatedStore = updateArticleFeedback(updatedStore, article.messageId, 'positive')
         collectedCount++
 
-        // ⭕の記事を翻訳してスレッドに投稿
+        // 👀の記事を翻訳してスレッドに投稿
         if (options.geminiApiKey) {
           await translateAndPost(client, channelId, article.messageId, article.articleUrl, options.geminiApiKey)
         }

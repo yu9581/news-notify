@@ -66,7 +66,7 @@ describe('collectReactions', () => {
     expect(result.articles).toHaveLength(0)
   })
 
-  it('⭕リアクションでpositiveフィードバックを記録する', async () => {
+  it('👀リアクションでpositiveフィードバックを記録する', async () => {
     const { collectReactions } = await import('../src/feedback/reaction-collector.js')
     const store: FeedbackStore = {
       articles: [{
@@ -81,7 +81,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['⭕', { count: 2 }], // 1 = Bot自身, 1 = ユーザー
+      ['👀', { count: 2 }], // 1 = Bot自身, 1 = ユーザー
     ])
     const client = createMockClient(reactions)
 
@@ -159,7 +159,7 @@ describe('collectReactions', () => {
     expect(result.articles[0].feedback).toBe('positive')
   })
 
-  it('⭕リアクション + geminiApiKeyで翻訳フローが実行される', async () => {
+  it('👀リアクション + geminiApiKeyで翻訳フローが実行される', async () => {
     const { postTranslationToThread } = await import('../src/discord/thread-poster.js')
     const { collectReactions } = await import('../src/feedback/reaction-collector.js')
     const store: FeedbackStore = {
@@ -175,7 +175,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['⭕', { count: 2 }],
+      ['👀', { count: 2 }],
     ])
     const client = createMockClient(reactions)
 
@@ -205,7 +205,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['⭕', { count: 2 }],
+      ['👀', { count: 2 }],
     ])
     const client = createMockClient(reactions)
 
@@ -232,7 +232,7 @@ describe('collectReactions', () => {
     }
 
     const reactions = new Map([
-      ['⭕', { count: 2 }],
+      ['👀', { count: 2 }],
     ])
     const client = createMockClient(reactions)
 
