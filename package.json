@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "discord.js": "^14.16.3"
+    "@mozilla/readability": "^0.6.0",
+    "discord.js": "^14.16.3",
+    "linkedom": "^0.18.12"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
