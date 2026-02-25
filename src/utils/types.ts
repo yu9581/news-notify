@@ -22,6 +22,7 @@ export interface Settings {
   readonly fetchDelayMs: number
   readonly summaryMaxTokens: number
   readonly deduplicationDays: number
+  readonly relevanceThreshold: number
 }
 
 export interface Watchlist {
@@ -44,6 +45,8 @@ export interface SummarizedArticle extends Article {
   readonly titleJa: string
   readonly summary: string
   readonly importance: '高' | '中' | '低'
+  readonly relevance: number
+  readonly relevanceReason: string
 }
 
 export interface SeenArticle {

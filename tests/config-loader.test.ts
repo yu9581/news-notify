@@ -49,6 +49,7 @@ describe('loadWatchlist', () => {
     expect(settings.fetchDelayMs).toBeGreaterThanOrEqual(0)
     expect(settings.summaryMaxTokens).toBeGreaterThan(0)
     expect(settings.deduplicationDays).toBeGreaterThan(0)
+    expect(settings.relevanceThreshold).toBeGreaterThanOrEqual(0)
   })
 })
 
