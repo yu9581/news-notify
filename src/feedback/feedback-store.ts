@@ -11,6 +11,7 @@ export interface NotifiedArticle {
   readonly relevance: number
   readonly notifiedAt: string
   readonly feedback?: 'positive' | 'negative'
+  readonly translated?: boolean
 }
 
 export interface FeedbackStore {
