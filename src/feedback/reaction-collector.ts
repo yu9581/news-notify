@@ -21,8 +21,9 @@ export async function collectReactions(
   // 翻訳失敗した記事のリトライ
   let updatedStore = store
   if (options.geminiApiKey) {
+    const MAX_RETRIES = 3
     const retryArticles = store.articles.filter(
-      a => a.feedback === 'positive' && a.translated === false
+      a => a.feedback === 'positive' && a.translated === false && (a.retryCount ?? 0) < MAX_RETRIES
     )
     for (const article of retryArticles) {
       const success = await translateAndPost(client, channelId, article.messageId, article.articleUrl, options.geminiApiKey)

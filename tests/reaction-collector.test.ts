@@ -346,6 +346,61 @@ describe('collectReactions', () => {
     expect(result.articles[0].translated).toBe(true)
   })
 
+  it('retryCount が3回に達した記事はリトライされない', async () => {
+    const { postTranslationToThread } = await import('../src/discord/thread-poster.js')
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive',
+        translated: false,
+        retryCount: 3,
+      }],
+      lastUpdated: '',
+    }
+
+    const client = createMockClient(new Map())
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(postTranslationToThread).not.toHaveBeenCalled()
+    expect(result.articles[0].translated).toBe(false)
+    expect(result.articles[0].retryCount).toBe(3)
+  })
+
+  it('リトライ失敗時に retryCount がカウントアップされる', async () => {
+    const { fetchArticleContent } = await import('../src/scraper/article-fetcher.js')
+    vi.mocked(fetchArticleContent).mockRejectedValueOnce(new Error('Network error'))
+
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+        feedback: 'positive',
+        translated: false,
+        retryCount: 1,
+      }],
+      lastUpdated: '',
+    }
+
+    const client = createMockClient(new Map())
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(result.articles[0].translated).toBe(false)
+    expect(result.articles[0].retryCount).toBe(2)
+  })
+
   it('メッセージ取得でエラーが出てもスキップして続行する', async () => {
     const { collectReactions } = await import('../src/feedback/reaction-collector.js')
     const store: FeedbackStore = {
