@@ -1,5 +1,6 @@
 import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
+import { GoogleDecoder } from 'google-news-url-decoder'
 
 const FETCH_TIMEOUT_MS = 10_000
 
@@ -39,39 +40,22 @@ export async function fetchArticleContent(url: string): Promise<ArticleContent> 
   }
 }
 
-async function resolveGoogleNewsUrl(url: string): Promise<string> {
+export async function resolveGoogleNewsUrl(url: string): Promise<string> {
   if (!url.includes('news.google.com/rss/articles/')) {
     return url
   }
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)',
-      },
-    })
-
-    if (response.url && response.url !== url) {
-      return response.url
+    const decoder = new GoogleDecoder()
+    const result = await decoder.decode(url)
+    if (result.status && result.decoded_url) {
+      return result.decoded_url
     }
-
-    const html = await response.text()
-    const match = html.match(/href="(https?:\/\/[^"]+)"[^>]*data-n-au/)
-      ?? html.match(/window\.location\.replace\("(https?:\/\/[^"]+)"\)/)
-      ?? html.match(/<a[^>]+href="(https?:\/\/(?!news\.google\.com)[^"]+)"/)
-    if (match) {
-      return match[1]
-    }
-
-    return url
-  } finally {
-    clearTimeout(timeout)
+  } catch {
+    // デコード失敗時は元のURLを返す
   }
+
+  return url
 }
 
 export function extractContent(html: string, url: string): ArticleContent {
