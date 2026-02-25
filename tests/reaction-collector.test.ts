@@ -5,6 +5,24 @@ vi.mock('../src/utils/config-loader.js', () => ({
   getRootDir: () => '/mock/root',
 }))
 
+vi.mock('../src/scraper/article-fetcher.js', () => ({
+  fetchArticleContent: vi.fn().mockResolvedValue({
+    title: 'Test Article',
+    textContent: 'This is test content.',
+  }),
+}))
+
+vi.mock('../src/ai/translator.js', () => ({
+  createTranslator: vi.fn().mockReturnValue({
+    translateArticle: vi.fn().mockResolvedValue('これはテストコンテンツです。'),
+  }),
+  splitIntoChunks: vi.fn().mockReturnValue(['これはテストコンテンツです。']),
+}))
+
+vi.mock('../src/discord/thread-poster.js', () => ({
+  postTranslationToThread: vi.fn().mockResolvedValue(undefined),
+}))
+
 vi.mock('fs', () => ({
   readFileSync: vi.fn().mockImplementation(() => { throw new Error('File not found') }),
   writeFileSync: vi.fn(),
@@ -138,6 +156,89 @@ describe('collectReactions', () => {
     const result = await collectReactions(client as any, 'ch-id', store)
 
     // フィードバック済みなので変更なし
+    expect(result.articles[0].feedback).toBe('positive')
+  })
+
+  it('⭕リアクション + geminiApiKeyで翻訳フローが実行される', async () => {
+    const { postTranslationToThread } = await import('../src/discord/thread-poster.js')
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+      }],
+      lastUpdated: '',
+    }
+
+    const reactions = new Map([
+      ['⭕', { count: 2 }],
+    ])
+    const client = createMockClient(reactions)
+
+    await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    expect(postTranslationToThread).toHaveBeenCalledWith(
+      client,
+      'ch-id',
+      'msg-1',
+      'これはテストコンテンツです。'
+    )
+  })
+
+  it('geminiApiKeyが未設定なら翻訳はスキップされる', async () => {
+    const { postTranslationToThread } = await import('../src/discord/thread-poster.js')
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+      }],
+      lastUpdated: '',
+    }
+
+    const reactions = new Map([
+      ['⭕', { count: 2 }],
+    ])
+    const client = createMockClient(reactions)
+
+    await collectReactions(client as any, 'ch-id', store)
+
+    expect(postTranslationToThread).not.toHaveBeenCalled()
+  })
+
+  it('翻訳が失敗してもフィードバック記録は正常に行われる', async () => {
+    const { fetchArticleContent } = await import('../src/scraper/article-fetcher.js')
+    vi.mocked(fetchArticleContent).mockRejectedValueOnce(new Error('Network error'))
+
+    const { collectReactions } = await import('../src/feedback/reaction-collector.js')
+    const store: FeedbackStore = {
+      articles: [{
+        messageId: 'msg-1',
+        articleUrl: 'https://example.com',
+        category: 'AI',
+        keyword: 'AI',
+        relevance: 80,
+        notifiedAt: new Date().toISOString(),
+      }],
+      lastUpdated: '',
+    }
+
+    const reactions = new Map([
+      ['⭕', { count: 2 }],
+    ])
+    const client = createMockClient(reactions)
+
+    const result = await collectReactions(client as any, 'ch-id', store, { geminiApiKey: 'test-key' })
+
+    // 翻訳は失敗したが、フィードバックはpositiveとして記録されている
     expect(result.articles[0].feedback).toBe('positive')
   })
 

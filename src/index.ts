@@ -33,7 +33,8 @@ async function main(): Promise<void> {
     const updatedFeedbackStore = await collectReactions(
       notifier.getClient(),
       env.discordChannelId,
-      feedbackStore
+      feedbackStore,
+      { geminiApiKey: env.geminiApiKey }
     )
     saveFeedbackStore(updatedFeedbackStore)
     console.log(`フィードバック収集完了`)
