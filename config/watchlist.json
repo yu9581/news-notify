@@ -19,7 +19,8 @@
     { "name": "成田悠輔", "keywords": ["成田悠輔"], "lang": "ja" },
     { "name": "Jensen Huang", "keywords": ["Jensen Huang", "NVIDIA CEO"], "lang": "en" },
     { "name": "Satya Nadella", "keywords": ["Satya Nadella", "Microsoft CEO"], "lang": "en" },
-    { "name": "Dario Amodei", "keywords": ["Dario Amodei", "Anthropic CEO"], "lang": "en" }
+    { "name": "Dario Amodei", "keywords": ["Dario Amodei", "Anthropic CEO"], "lang": "en" },
+    { "name": "Ray Kurzweil", "keywords": ["Ray Kurzweil", "レイ・カーツワイル", "Kurzweil Singularity"], "lang": "en" }
   ],
   "topics": [
     { "name": "AI", "keywords": ["artificial intelligence breakthrough", "AI news"], "lang": "en" },
