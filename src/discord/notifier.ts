@@ -15,8 +15,13 @@ interface EmbedSendable {
   }>
 }
 
-export function createNotifier(botToken: string, channelId: string) {
-  const client = new Client({
+export interface CreateNotifierOptions {
+  readonly client?: Client
+}
+
+export function createNotifier(botToken: string, channelId: string, options: CreateNotifierOptions = {}) {
+  const externalClient = options.client
+  const client = externalClient ?? new Client({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessageReactions,
@@ -28,13 +33,18 @@ export function createNotifier(botToken: string, channelId: string) {
   }
 
   async function connect(): Promise<void> {
-    await client.login(botToken)
-    await new Promise<void>((resolve) => {
+    if (externalClient) {
+      // 外部clientは既に接続済み
+      return
+    }
+    const readyPromise = new Promise<void>((resolve) => {
       client.once('ready', () => {
         console.log(`Discord Bot 接続完了: ${client.user?.tag}`)
         resolve()
       })
     })
+    await client.login(botToken)
+    await readyPromise
   }
 
   async function notifyArticle(article: SummarizedArticle): Promise<NotificationResult> {
@@ -94,6 +104,10 @@ export function createNotifier(botToken: string, channelId: string) {
   }
 
   async function disconnect(): Promise<void> {
+    if (externalClient) {
+      // 外部clientのライフサイクルは呼び出し元が管理する
+      return
+    }
     client.destroy()
     console.log('Discord Bot 切断完了')
   }

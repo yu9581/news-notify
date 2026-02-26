@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
+    "start:bot": "tsx src/bot.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

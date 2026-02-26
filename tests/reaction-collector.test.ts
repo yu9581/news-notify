@@ -19,7 +19,10 @@ vi.mock('../src/ai/translator.js', () => ({
   splitIntoChunks: vi.fn().mockReturnValue(['これはテストコンテンツです。']),
 }))
 
+const mockPendingMessage = { edit: vi.fn().mockResolvedValue(undefined) }
+
 vi.mock('../src/discord/thread-poster.js', () => ({
+  sendPendingMessage: vi.fn().mockResolvedValue(mockPendingMessage),
   postTranslationToThread: vi.fn().mockResolvedValue(undefined),
 }))
 
@@ -185,7 +188,8 @@ describe('collectReactions', () => {
       client,
       'ch-id',
       'msg-1',
-      'これはテストコンテンツです。'
+      'これはテストコンテンツです。',
+      mockPendingMessage
     )
   })
 

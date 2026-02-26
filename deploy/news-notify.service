@@ -1,0 +1,16 @@
+[Unit]
+Description=News Notify Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/news-notify
+EnvironmentFile=/opt/news-notify/.env
+ExecStart=/usr/bin/npx tsx src/bot.ts
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
