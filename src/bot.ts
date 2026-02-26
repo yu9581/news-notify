@@ -1,8 +1,6 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js'
-import cron from 'node-cron'
 import { getEnv } from './utils/config-loader.js'
 import { registerReactionHandler } from './events/reaction-handler.js'
-import { runNewsJob } from './jobs/news-job.js'
 
 async function startBot(): Promise<void> {
   console.log('=== ニュース通知Bot 常時起動モード ===')
@@ -35,33 +33,6 @@ async function startBot(): Promise<void> {
 
   // リアクションハンドラー登録
   registerReactionHandler(client, env.discordChannelId)
-
-  // ニュース収集ジョブをスケジュール（JST 7:00, 13:00, 19:00）
-  // cron式はUTC: 22:00, 4:00, 10:00
-  let jobRunning = false
-  const scheduleJob = (cronExpr: string, label: string) => {
-    cron.schedule(cronExpr, async () => {
-      if (jobRunning) {
-        console.log(`${label}: 前回のジョブがまだ実行中のためスキップ`)
-        return
-      }
-      jobRunning = true
-      try {
-        console.log(`\n${label}: ニュース収集ジョブ開始`)
-        await runNewsJob({ client, channelId: env.discordChannelId })
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error)
-        console.error(`${label}: ジョブ実行エラー: ${msg}`)
-      } finally {
-        jobRunning = false
-      }
-    })
-    console.log(`スケジュール登録: ${label} (${cronExpr})`)
-  }
-
-  scheduleJob('0 22 * * *', 'JST 7:00')
-  scheduleJob('0 4 * * *', 'JST 13:00')
-  scheduleJob('0 10 * * *', 'JST 19:00')
 
   // 安全な終了処理
   const shutdown = () => {
