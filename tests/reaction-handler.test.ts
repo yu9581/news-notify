@@ -18,6 +18,19 @@ vi.mock('fs', () => ({
   writeFileSync: vi.fn(),
 }))
 
+function createReaction(overrides: Record<string, unknown> = {}) {
+  return {
+    emoji: { name: '👀' },
+    partial: false,
+    message: {
+      channelId: 'ch-123',
+      id: 'msg-1',
+      embeds: [{ url: 'https://example.com' }],
+    },
+    ...overrides,
+  }
+}
+
 describe('registerReactionHandler', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -46,10 +59,7 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const reaction = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-123', id: 'msg-1' } }
-    const user = { bot: true }
-
-    await handler(reaction, user)
+    await handler(createReaction(), { bot: true })
 
     expect(translateAndPost).not.toHaveBeenCalled()
   })
@@ -65,10 +75,7 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const reaction = { emoji: { name: '❌' }, partial: false, message: { channelId: 'ch-123', id: 'msg-1' } }
-    const user = { bot: false }
-
-    await handler(reaction, user)
+    await handler(createReaction({ emoji: { name: '❌' } }), { bot: false })
 
     expect(translateAndPost).not.toHaveBeenCalled()
   })
@@ -84,21 +91,15 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const reaction = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-other', id: 'msg-1' } }
-    const user = { bot: false }
-
-    await handler(reaction, user)
+    await handler(
+      createReaction({ message: { channelId: 'ch-other', id: 'msg-1', embeds: [{ url: 'https://example.com' }] } }),
+      { bot: false }
+    )
 
     expect(translateAndPost).not.toHaveBeenCalled()
   })
 
-  it('feedback.jsonに記事がない場合は無視する', async () => {
-    const { readFileSync } = await import('fs')
-    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
-      articles: [],
-      lastUpdated: '',
-    }))
-
+  it('EmbedにURLがない場合は無視する', async () => {
     const { translateAndPost } = await import('../src/services/translate-service.js')
     const { registerReactionHandler } = await import('../src/events/reaction-handler.js')
 
@@ -109,10 +110,10 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const reaction = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-123', id: 'msg-unknown' } }
-    const user = { bot: false }
-
-    await handler(reaction, user)
+    await handler(
+      createReaction({ message: { channelId: 'ch-123', id: 'msg-1', embeds: [] } }),
+      { bot: false }
+    )
 
     expect(translateAndPost).not.toHaveBeenCalled()
   })
@@ -143,15 +144,12 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const reaction = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-123', id: 'msg-1' } }
-    const user = { bot: false }
-
-    await handler(reaction, user)
+    await handler(createReaction(), { bot: false })
 
     expect(translateAndPost).not.toHaveBeenCalled()
   })
 
-  it('条件を満たすリアクションで翻訳が実行される', async () => {
+  it('feedback.jsonに記事があれば既存エントリを更新して翻訳実行', async () => {
     const { readFileSync, writeFileSync } = await import('fs')
     vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
       articles: [{
@@ -175,10 +173,7 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const reaction = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-123', id: 'msg-1' } }
-    const user = { bot: false }
-
-    await handler(reaction, user)
+    await handler(createReaction(), { bot: false })
 
     expect(translateAndPost).toHaveBeenCalledWith(
       client,
@@ -188,19 +183,18 @@ describe('registerReactionHandler', () => {
       'test-key'
     )
     expect(writeFileSync).toHaveBeenCalled()
+
+    // 保存されたデータに translated: true と feedback: 'positive' が含まれる
+    const savedData = JSON.parse(vi.mocked(writeFileSync).mock.calls[0][1] as string)
+    const savedArticle = savedData.articles.find((a: any) => a.messageId === 'msg-1')
+    expect(savedArticle.translated).toBe(true)
+    expect(savedArticle.feedback).toBe('positive')
   })
 
-  it('Partialリアクションの場合はfetchしてからprocessする', async () => {
-    const { readFileSync } = await import('fs')
+  it('feedback.jsonに記事がなくてもEmbedのURLで翻訳実行・新規追加', async () => {
+    const { readFileSync, writeFileSync } = await import('fs')
     vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
-      articles: [{
-        messageId: 'msg-1',
-        articleUrl: 'https://example.com',
-        category: 'AI',
-        keyword: 'AI',
-        relevance: 80,
-        notifiedAt: new Date().toISOString(),
-      }],
+      articles: [],
       lastUpdated: '',
     }))
 
@@ -214,16 +208,52 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const fullReaction = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-123', id: 'msg-1' } }
+    await handler(createReaction(), { bot: false })
+
+    expect(translateAndPost).toHaveBeenCalledWith(
+      client,
+      'ch-123',
+      'msg-1',
+      'https://example.com',
+      'test-key'
+    )
+    expect(writeFileSync).toHaveBeenCalled()
+
+    // 新規エントリとして追加される
+    const savedData = JSON.parse(vi.mocked(writeFileSync).mock.calls[0][1] as string)
+    expect(savedData.articles).toHaveLength(1)
+    expect(savedData.articles[0].messageId).toBe('msg-1')
+    expect(savedData.articles[0].articleUrl).toBe('https://example.com')
+    expect(savedData.articles[0].translated).toBe(true)
+    expect(savedData.articles[0].feedback).toBe('positive')
+  })
+
+  it('Partialリアクションの場合はfetchしてからprocessする', async () => {
+    const { readFileSync } = await import('fs')
+    vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
+      articles: [],
+      lastUpdated: '',
+    }))
+
+    const { translateAndPost } = await import('../src/services/translate-service.js')
+    const { registerReactionHandler } = await import('../src/events/reaction-handler.js')
+
+    let handler: Function = () => {}
+    const client = {
+      on: (_event: string, fn: Function) => { handler = fn },
+    } as any
+
+    registerReactionHandler(client, 'ch-123')
+
+    const fullReaction = createReaction()
     const partialReaction = {
       emoji: { name: '👀' },
       partial: true,
       fetch: vi.fn().mockResolvedValue(fullReaction),
-      message: { channelId: 'ch-123', id: 'msg-1' },
+      message: { channelId: 'ch-123', id: 'msg-1', embeds: [{ url: 'https://example.com' }] },
     }
-    const user = { bot: false }
 
-    await handler(partialReaction, user)
+    await handler(partialReaction, { bot: false })
 
     expect(partialReaction.fetch).toHaveBeenCalled()
     expect(translateAndPost).toHaveBeenCalled()
@@ -234,10 +264,7 @@ describe('registerReactionHandler', () => {
     const callOrder: string[] = []
 
     vi.mocked(readFileSync).mockReturnValue(JSON.stringify({
-      articles: [
-        { messageId: 'msg-1', articleUrl: 'https://example.com/1', category: 'AI', keyword: 'AI', relevance: 80, notifiedAt: new Date().toISOString() },
-        { messageId: 'msg-2', articleUrl: 'https://example.com/2', category: 'AI', keyword: 'AI', relevance: 90, notifiedAt: new Date().toISOString() },
-      ],
+      articles: [],
       lastUpdated: '',
     }))
 
@@ -259,8 +286,8 @@ describe('registerReactionHandler', () => {
 
     registerReactionHandler(client, 'ch-123')
 
-    const reaction1 = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-123', id: 'msg-1' } }
-    const reaction2 = { emoji: { name: '👀' }, partial: false, message: { channelId: 'ch-123', id: 'msg-2' } }
+    const reaction1 = createReaction({ message: { channelId: 'ch-123', id: 'msg-1', embeds: [{ url: 'https://example.com/1' }] } })
+    const reaction2 = createReaction({ message: { channelId: 'ch-123', id: 'msg-2', embeds: [{ url: 'https://example.com/2' }] } })
     const user = { bot: false }
 
     // 同時にリアクションを発火

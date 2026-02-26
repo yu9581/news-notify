@@ -1,5 +1,5 @@
 import type { Client, MessageReaction, PartialMessageReaction, User, PartialUser } from 'discord.js'
-import { loadFeedbackStore, saveFeedbackStore, updateArticleFeedback } from '../feedback/feedback-store.js'
+import { loadFeedbackStore, saveFeedbackStore } from '../feedback/feedback-store.js'
 import { translateAndPost } from '../services/translate-service.js'
 import { getEnv } from '../utils/config-loader.js'
 
@@ -52,49 +52,71 @@ async function handleReactionAdd(
 
   const messageId = reaction.message.id
 
-  // feedback.json から対象記事を検索
+  // メッセージのEmbedからURLを取得
+  const embeds = reaction.message.embeds ?? []
+  const articleUrl = embeds[0]?.url ?? null
+
+  if (!articleUrl) {
+    console.debug(`Embedに記事URLなし (messageId: ${messageId})`)
+    return
+  }
+
+  // feedback.json で翻訳済みかチェック（あれば参照）
   const store = loadFeedbackStore()
-  const article = store.articles.find(a => a.messageId === messageId)
+  const existingArticle = store.articles.find(a => a.messageId === messageId)
 
-  // 記事がない場合は無視
-  if (!article) return
+  if (existingArticle?.translated === true) {
+    console.debug(`翻訳済みのためスキップ: ${articleUrl} (messageId: ${messageId})`)
+    return
+  }
 
-  // 既に翻訳済みなら無視
-  if (article.translated === true) return
-
-  // 既にpositive済みで翻訳未完了の場合は翻訳だけ実行
   const env = getEnv()
-  const needsFeedbackUpdate = article.feedback !== 'positive'
 
-  const updatedStore = needsFeedbackUpdate
-    ? updateArticleFeedback(store, messageId, 'positive')
-    : store
-
-  console.log(`即時翻訳開始: ${article.articleUrl} (messageId: ${messageId})`)
+  console.log(`即時翻訳開始: ${articleUrl} (messageId: ${messageId})`)
 
   const success = await translateAndPost(
     client,
     channelId,
     messageId,
-    article.articleUrl,
+    articleUrl,
     env.geminiApiKey
   )
 
-  // 翻訳結果を反映して保存
-  const finalStore = {
-    ...updatedStore,
-    articles: updatedStore.articles.map(a =>
-      a.messageId === messageId
-        ? { ...a, translated: success, feedback: 'positive' as const }
-        : a
-    ),
-    lastUpdated: new Date().toISOString(),
+  // 翻訳結果を feedback.json に記録
+  if (existingArticle) {
+    // 既存エントリを更新
+    const finalStore = {
+      ...store,
+      articles: store.articles.map(a =>
+        a.messageId === messageId
+          ? { ...a, translated: success, feedback: 'positive' as const }
+          : a
+      ),
+      lastUpdated: new Date().toISOString(),
+    }
+    saveFeedbackStore(finalStore)
+  } else {
+    // feedback.json にエントリがない場合は新規追加
+    const newArticle = {
+      messageId,
+      articleUrl,
+      category: '',
+      keyword: '',
+      relevance: 0,
+      notifiedAt: new Date().toISOString(),
+      feedback: 'positive' as const,
+      translated: success,
+    }
+    const finalStore = {
+      articles: [...store.articles, newArticle],
+      lastUpdated: new Date().toISOString(),
+    }
+    saveFeedbackStore(finalStore)
   }
-  saveFeedbackStore(finalStore)
 
   if (success) {
-    console.log(`即時翻訳完了: ${article.articleUrl}`)
+    console.log(`即時翻訳完了: ${articleUrl}`)
   } else {
-    console.log(`即時翻訳失敗: ${article.articleUrl}`)
+    console.log(`即時翻訳失敗: ${articleUrl}`)
   }
 }
