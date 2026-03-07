@@ -2,10 +2,8 @@ name: News Notify
 
 on:
   schedule:
-    # JST 7:00 (UTC 22:00前日), 13:00 (UTC 4:00), 19:00 (UTC 10:00)
+    # JST 7:00 (UTC 22:00前日)
     - cron: '0 22 * * *'
-    - cron: '0 4 * * *'
-    - cron: '0 10 * * *'
 
   workflow_dispatch:
 
